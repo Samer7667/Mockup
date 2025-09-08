@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول الجامعة المنظم - مع ميزة التعديل</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .controls {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #218838;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+        }
+        .lecture {
+            background-color: #d4edda;
+        }
+        .virtual {
+            background-color: #d1ecf1;
+        }
+        .mid-exam {
+            background-color: #fff3cd;
+        }
+        .final-exam {
+            background-color: #f8d7da;
+        }
+        .course-header {
+            background-color: #e9ecef;
+            font-weight: bold;
+        }
+        .time-cell {
+            font-weight: bold;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+        .form-container {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .session-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+            border-radius: 4px;
+        }
+        .remove-session {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .remove-session:hover {
+            background-color: #c82333;
+        }
+        @media print {
+            .controls, .form-container {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>جدول الجامعة المنظم - الفصل الأول 2025-2026</h1>
+        
+        <div class="controls">
+            <button id="exportPdf">تصدير إلى PDF</button>
+            <button id="showForm" class="secondary">إضافة مادة جديدة</button>
+            <button id="resetData" class="secondary">مسح جميع البيانات</button>
+        </div>
+        
+        <div id="courseForm" class="form-container" style="display: none;">
+            <h3>إضافة مادة جديدة</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="courseName">اسم المادة</label>
+                    <input type="text" id="courseName" required>
+                </div>
+                <div class="form-group">
+                    <label for="courseCode">الرقم المرجعي</label>
+                    <input type="text" id="courseCode">
+                </div>
+                <div class="form-group">
+                    <label for="instructor">اسم الدكتور</label>
+                    <input type="text" id="instructor" required>
+                </div>
+            </div>
+            
+            <h4>مواعيد الحصص</h4>
+            <div id="sessionsContainer">
+                <div class="session-row">
+                    <div class="form-group">
+                        <label>اليوم</label>
+                        <select class="session-day">
+                            <option value="الأحد">الأحد</option>
+                            <option value="الإثنين">الإثنين</option>
+                            <option value="الثلاثاء">الثلاثاء</option>
+                            <option value="الأربعاء">الأربعاء</option>
+                            <option value="الخميس">الخميس</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>وقت البدء</label>
+                        <select class="session-start">
+                            <option value="08:00 صباحا">08:00 صباحا</option>
+                            <option value="09:00 صباحا">09:00 صباحa</option>
+                            <option value="10:00 صباحا">10:00 صباحا</option>
+                            <option value="11:00 صباحا">11:00 صباحا</option>
+                            <option value="12:00 مساءً">12:00 مساءً</option>
+                            <option value="01:00 مساءً">01:00 مساءً</option>
+                            <option value="02:00 مساءً">02:00 مساءً</option>
+                            <option value="03:00 مساءً">03:00 مساءً</option>
+                            <option value="04:00 مساءً">04:00 مساءً</option>
+                            <option value="05:00 مساءً">05:00 مساءً</option>
+                            <option value="06:00 مساءً">06:00 مساءً</option>
+                            <option value="07:00 مساءً">07:00 مساءً</option>
+                            <option value="08:00 مساءً">08:00 مساءً</option>
+                            <option value="09:00 مساءً">09:00 مساءً</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>وقت النهاية</label>
+                        <select class="session-end">
+                            <option value="08:50 صباحا">08:50 صباحا</option>
+                            <option value="09:50 صباحا">09:50 صباحا</option>
+                            <option value="10:50 صباحا">10:50 صباحا</option>
+                            <option value="11:50 صباحا">11:50 صباحا</option>
+                            <option value="12:50 مساءً">12:50 مساءً</option>
+                            <option value="01:50 مساءً">01:50 مساءً</option>
+                            <option value="02:50 مساءً">02:50 مساءً</option>
+                            <option value="03:50 مساءً">03:50 مساءً</option>
+                            <option value="04:50 مساءً">04:50 مساءً</option>
+                            <option value="05:50 مساءً">05:50 مساءً</option>
+                            <option value="06:50 مساءً">06:50 مساءً</option>
+                            <option value="07:50 مساءً">07:50 مساءً</option>
+                            <option value="08:50 مساءً">08:50 مساءً</option>
+                            <option value="09:50 مساءً">09:50 مساءً</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>نوع الحصة</label>
+                        <select class="session-type">
+                            <option value="Virtual">افتراضي</option>
+                            <option value="Lecture">حضوري</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>المكان</label>
+                        <input type="text" class="session-location" value="افتراضي">
+                    </div>
+                    <button type="button" class="remove-session">حذف</button>
+                </div>
+            </div>
+            <button type="button" id="addSession" class="secondary">إضافة حصة أخرى</button>
+            
+            <h4>مواعيد الامتحانات</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="midExamDate">تاريخ امتحان منتصف الفصل</label>
+                    <input type="text" id="midExamDate" placeholder="مثال: 21/ربيع الآخر/1447 (الإثنين)">
+                </div>
+                <div class="form-group">
+                    <label for="midExamTime">وقت امتحان منتصف الفصل</label>
+                    <input type="text" id="midExamTime" placeholder="مثال: 05:30 صباحا - 06:30 صباحا">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="finalExamDate">تاريخ امتحان نهاية الفصل</label>
+                    <input type="text" id="finalExamDate" placeholder="مثال: 03/رجب/1447 (الثلاثاء)">
+                </div>
+                <div class="form-group">
+                    <label for="finalExamTime">وقت امتحان نهاية الفصل</label>
+                    <input type="text" id="finalExamTime" placeholder="مثال: 05:30 صباحا - 07:30 صباحا">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <button type="button" id="saveCourse" class="success">حفظ المادة</button>
+                <button type="button" id="cancelForm" class="secondary">إلغاء</button>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #d4edda;"></div>
+                <span>محاضرة حضورية</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #d1ecf1;"></div>
+                <span>محاضرة افتراضية</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #fff3cd;"></div>
+                <span>امتحان منتصف الفصل</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f8d7da;"></div>
+                <span>امتحان نهاية الفصل</span>
+            </div>
+        </div>
+        
+        <table id="schedule-table">
+            <thead>
+                <tr>
+                    <th>الوقت/اليوم</th>
+                    <th>الأحد</th>
+                    <th>الإثنين</th>
+                    <th>الثلاثاء</th>
+                    <th>الأربعاء</th>
+                    <th>الخميس</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- سيتم ملء الجدول بواسطة JavaScript -->
+            </tbody>
+        </table>
+        
+        <h2>مواعيد الامتحانات</h2>
+        <table id="exams-table">
+            <thead>
+                <tr>
+                    <th>المادة</th>
+                    <th>اسم الدكتور</th>
+                    <th>امتحان منتصف الفصل</th>
+                    <th>امتحان نهاية الفصل</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- سيتم ملء الجدول بواسطة JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // بيانات الجدول - سيتم تحميلها من localStorage إذا كانت موجودة
+            let scheduleData = JSON.parse(localStorage.getItem('universitySchedule')) || [
+                {
+                    course: "Digital Logic Design",
+                    code: "10890",
+                    instructor: "Alismail, Hamad",
+                    schedule: [
+                        { day: "الأربعاء", time: "05:00 مساءً - 05:50 مساءً", type: "Virtual", location: "افتراضي" },
+                        { day: "الإثنين", time: "05:00 مساءً - 05:50 مساءً", type: "Lecture", location: "حضوري" }
+                    ],
+                    midExam: { date: "21/ربيع الآخر/1447 (الإثنين)", time: "05:30 صباحا - 06:30 صباحا" },
+                    finalExam: { date: "03/رجب/1447 (الثلاثاء)", time: "05:30 صباحا - 07:30 صباحا" }
+                },
+                {
+                    course: "Discrete Mathematics",
+                    code: "15736",
+                    instructor: "Abul, Hamid",
+                    schedule: [
+                        { day: "الأحد", time: "05:00 مساءً - 05:50 مساءً", type: "Virtual", location: "افتراضي" },
+                        { day: "الثلاثاء", time: "05:00 مساءً - 05:50 مساءً", type: "Virtual", location: "افتراضي" }
+                    ],
+                    midExam: { date: "20/ربيع الآخر/1447 (الأحد)", time: "08:30 صباحا - 09:30 صباحا" },
+                    finalExam: { date: "27/جمادى الآخرة/1447 (الخميس)", time: "08:00 صباحa - 10:00 صباحا" }
+                },
+                {
+                    course: "General Physics 1",
+                    code: "16279",
+                    instructor: "Showkat, Lone",
+                    schedule: [
+                        { day: "الأحد", time: "08:00 مساءً - 08:50 مساءً", type: "Virtual", location: "افتراضي" },
+                        { day: "الثلاثاء", time: "08:00 مساءً - 08:50 مساءً", type: "Virtual", location: "افتراضي" }
+                    ],
+                    midExam: { date: "22/ربيع الآخر/1447 (الثلاثاء)", time: "05:30 صباحا - 06:30 صباحا" },
+                    finalExam: { date: "02/رجب/1447 (الإثنين)", time: "03:00 صباحا - 05:00 صباحا" }
+                },
+                {
+                    course: "Object Oriented Programming",
+                    code: "10888",
+                    instructor: "albaker, turki",
+                    schedule: [
+                        { day: "الأربعاء", time: "04:00 مساءً - 04:50 مساءً", type: "Virtual", location: "افتراضي" },
+                        { day: "الإثنين", time: "04:00 مساءً - 04:50 مساءً", type: "Lecture", location: "حضوري" }
+                    ],
+                    midExam: { date: "23/ربيع الآخر/1447 (الأربعاء)", time: "07:00 صباحا - 08:00 صباحا" },
+                    finalExam: { date: "05/رجب/1447 (الخميس)", time: "05:30 صباحا - 07:30 صباحا" }
+                }
+            ];
+
+            // أوقات اليوم من الساعة 8 صباحا إلى 9 مساء
+            const times = [
+                "08:00 صباحا", "09:00 صباحا", "10:00 صباحا", "11:00 صباحا", 
+                "12:00 مساءً", "01:00 مساءً", "02:00 مساءً", "03:00 مساءً", 
+                "04:00 مساءً", "05:00 مساءً", "06:00 مساءً", "07:00 مساءً", 
+                "08:00 مساءً", "09:00 مساءً"
+            ];
+
+            // عناصر واجهة المستخدم
+            const courseForm = document.getElementById('courseForm');
+            const showFormBtn = document.getElementById('showForm');
+            const cancelFormBtn = document.getElementById('cancelForm');
+            const saveCourseBtn = document.getElementById('saveCourse');
+            const addSessionBtn = document.getElementById('addSession');
+            const resetDataBtn = document.getElementById('resetData');
+            const sessionsContainer = document.getElementById('sessionsContainer');
+
+            // عرض/إخفاء نموذج إضافة المادة
+            showFormBtn.addEventListener('click', function() {
+                courseForm.style.display = 'block';
+            });
+
+            cancelFormBtn.addEventListener('click', function() {
+                courseForm.style.display = 'none';
+                clearForm();
+            });
+
+            // إضافة حصة جديدة
+            addSessionBtn.addEventListener('click', function() {
+                const newSession = document.createElement('div');
+                newSession.className = 'session-row';
+                newSession.innerHTML = `
+                    <div class="form-group">
+                        <label>اليوم</label>
+                        <select class="session-day">
+                            <option value="الأحد">الأحد</option>
+                            <option value="الإثنين">الإثنين</option>
+                            <option value="الثلاثاء">الثلاثاء</option>
+                            <option value="الأربعاء">الأربعاء</option>
+                            <option value="الخميس">الخميس</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>وقت البدء</label>
+                        <select class="session-start">
+                            <option value="08:00 صباحا">08:00 صباحا</option>
+                            <option value="09:00 صباحا">09:00 صباحا</option>
+                            <option value="10:00 صباحا">10:00 صباحا</option>
+                            <option value="11:00 صباحا">11:00 صباحا</option>
+                            <option value="12:00 مساءً">12:00 مساءً</option>
+                            <option value="01:00 مساءً">01:00 مساءً</option>
+                            <option value="02:00 مساءً">02:00 مساءً</option>
+                            <option value="03:00 مساءً">03:00 مساءً</option>
+                            <option value="04:00 مساءً">04:00 مساءً</option>
+                            <option value="05:00 مساءً">05:00 مساءً</option>
+                            <option value="06:00 مساءً">06:00 مساءً</option>
+                            <option value="07:00 مساءً">07:00 مساءً</option>
+                            <option value="08:00 مساءً">08:00 مساءً</option>
+                            <option value="09:00 مساءً">09:00 مساءً</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>وقت النهاية</label>
+                        <select class="session-end">
+                            <option value="08:50 صباحا">08:50 صباحا</option>
+                            <option value="09:50 صباحa">09:50 صباحا</option>
+                            <option value="10:50 صباحا">10:50 صباحا</option>
+                            <option value="11:50 صباحا">11:50 صباحا</option>
+                            <option value="12:50 مساءً">12:50 مساءً</option>
+                            <option value="01:50 مساءً">01:50 مساءً</option>
+                            <option value="02:50 مساءً">02:50 مساءً</option>
+                            <option value="03:50 مساءً">03:50 مساءً</option>
+                            <option value="04:50 مساءً">04:50 مساءً</option>
+                            <option value="05:50 مساءً">05:50 مساءً</option>
+                            <option value="06:50 مساءً">06:50 مساءً</option>
+                            <option value="07:50 مساءً">07:50 مساءً</option>
+                            <option value="08:50 مساءً">08:50 مساءً</option>
+                            <option value="09:50 مساءً">09:50 مساءً</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>نوع الحصة</label>
+                        <select class="session-type">
+                            <option value="Virtual">افتراضي</option>
+                            <option value="Lecture">حضوري</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>المكان</label>
+                        <input type="text" class="session-location" value="افتراضي">
+                    </div>
+                    <button type="button" class="remove-session">حذف</button>
+                `;
+                
+                // إضافة حدث لحذف الحصة
+                newSession.querySelector('.remove-session').addEventListener('click', function() {
+                    newSession.remove();
+                });
+                
+                sessionsContainer.appendChild(newSession);
+            });
+
+            // حذف الحصة
+            sessionsContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('remove-session')) {
+                    if (document.querySelectorAll('.session-row').length > 1) {
+                        e.target.closest('.session-row').remove();
+                    } else {
+                        alert('يجب أن تحتوي المادة على حصة واحدة على الأقل');
+                    }
+                }
+            });
+
+            // حفظ المادة
+            saveCourseBtn.addEventListener('click', function() {
+                const courseName = document.getElementById('courseName').value;
+                const courseCode = document.getElementById('courseCode').value;
+                const instructor = document.getElementById('instructor').value;
+                const midExamDate = document.getElementById('midExamDate').value;
+                const midExamTime = document.getElementById('midExamTime').value;
+                const finalExamDate = document.getElementById('finalExamDate').value;
+                const finalExamTime = document.getElementById('finalExamTime').value;
+                
+                if (!courseName || !instructor) {
+                    alert('يرجى إدخال اسم المادة واسم الدكتور');
+                    return;
+                }
+                
+                // جمع بيانات الحصص
+                const sessions = [];
+                const sessionRows = document.querySelectorAll('.session-row');
+                
+                sessionRows.forEach(row => {
+                    const day = row.querySelector('.session-day').value;
+                    const start = row.querySelector('.session-start').value;
+                    const end = row.querySelector('.session-end').value;
+                    const type = row.querySelector('.session-type').value;
+                    const location = row.querySelector('.session-location').value;
+                    
+                    sessions.push({
+                        day: day,
+                        time: `${start} - ${end}`,
+                        type: type,
+                        location: location
+                    });
+                });
+                
+                // إضافة المادة الجديدة
+                scheduleData.push({
+                    course: courseName,
+                    code: courseCode,
+                    instructor: instructor,
+                    schedule: sessions,
+                    midExam: { date: midExamDate, time: midExamTime },
+                    finalExam: { date: finalExamDate, time: finalExamTime }
+                });
+                
+                // حفظ البيانات وتحديث الجدول
+                saveData();
+                renderSchedule();
+                courseForm.style.display = 'none';
+                clearForm();
+            });
+
+            // مسح البيانات
+            resetDataBtn.addEventListener('click', function() {
+                if (confirm('هل أنت متأكد من أنك تريد مسح جميع البيانات؟')) {
+                    scheduleData = [];
+                    saveData();
+                    renderSchedule();
+                }
+            });
+
+            // حفظ البيانات في localStorage
+            function saveData() {
+                localStorage.setItem('universitySchedule', JSON.stringify(scheduleData));
+            }
+
+            // مسح نموذج الإضافة
+            function clearForm() {
+                document.getElementById('courseName').value = '';
+                document.getElementById('courseCode').value = '';
+                document.getElementById('instructor').value = '';
+                document.getElementById('midExamDate').value = '';
+                document.getElementById('midExamTime').value = '';
+                document.getElementById('finalExamDate').value = '';
+                document.getElementById('finalExamTime').value = '';
+                
+                // إبقاء حصة واحدة فقط
+                const sessions = document.querySelectorAll('.session-row');
+                for (let i = 1; i < sessions.length; i++) {
+                    sessions[i].remove();
+                }
+                
+                // إعادة تعيين الحصة الأولى
+                const firstSession = sessions[0];
+                firstSession.querySelector('.session-day').value = 'الأحد';
+                firstSession.querySelector('.session-start').value = '08:00 صباحا';
+                firstSession.querySelector('.session-end').value = '08:50 صباحا';
+                firstSession.querySelector('.session-type').value = 'Virtual';
+                firstSession.querySelector('.session-location').value = 'افتراضي';
+            }
+
+            // عرض الجدول
+            function renderSchedule() {
+                renderWeeklySchedule();
+                renderExamsTable();
+            }
+
+            // عرض الجدول الأسبوعي
+            function renderWeeklySchedule() {
+                const scheduleTable = document.querySelector('#schedule-table tbody');
+                scheduleTable.innerHTML = '';
+                
+                // تهيئة الصفوف للأوقات
+                times.forEach(time => {
+                    const row = document.createElement('tr');
+                    const timeCell = document.createElement('td');
+                    timeCell.textContent = time;
+                    timeCell.classList.add('time-cell');
+                    row.appendChild(timeCell);
+                    
+                    // إضافة خلايا فارغة لكل يوم
+                    for (let i = 0; i < 5; i++) {
+                        row.appendChild(document.createElement('td'));
+                    }
+                    
+                    scheduleTable.appendChild(row);
+                });
+
+                // ملء الجدول بالدروس
+                scheduleData.forEach(course => {
+                    course.schedule.forEach(session => {
+                        const dayIndex = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس"].indexOf(session.day) + 1;
+                        
+                        // البحث عن الصف المناسب للوقت
+                        const timeRows = scheduleTable.querySelectorAll('tr');
+                        for (let i = 0; i < timeRows.length; i++) {
+                            const timeCell = timeRows[i].cells[0].textContent;
+                            if (timeCell === session.time.split(' - ')[0]) {
+                                const cell = timeRows[i].cells[dayIndex];
+                                cell.textContent = `${course.course} (${session.type === 'Virtual' ? 'افتراضي' : 'حضوري'})`;
+                                cell.title = `الدكتور: ${course.instructor}`;
+                                
+                                // إضافة لون حسب نوع الحصة
+                                if (session.type === 'Virtual') {
+                                    cell.classList.add('virtual');
+                                } else if (session.type === 'Lecture') {
+                                    cell.classList.add('lecture');
+                                }
+                                break;
+                            }
+                        }
+                    });
+                });
+            }
+
+            // عرض جدول الامتحانات
+            function renderExamsTable() {
+                const examsTable = document.querySelector('#exams-table tbody');
+                examsTable.innerHTML = '';
+                
+                scheduleData.forEach((course, index) => {
+                    const row = document.createElement('tr');
+                    
+                    const courseCell = document.createElement('td');
+                    courseCell.textContent = course.course;
+                    row.appendChild(courseCell);
+                    
+                    const instructorCell = document.createElement('td');
+                    instructorCell.textContent = course.instructor;
+                    row.appendChild(instructorCell);
+                    
+                    const midExamCell = document.createElement('td');
+                    midExamCell.textContent = course.midExam.date && course.midExam.time ? 
+                        `${course.midExam.date} - ${course.midExam.time}` : 'غير محدد';
+                    midExamCell.classList.add('mid-exam');
+                    row.appendChild(midExamCell);
+                    
+                    const finalExamCell = document.createElement('td');
+                    finalExamCell.textContent = course.finalExam.date && course.finalExam.time ? 
+                        `${course.finalExam.date} - ${course.finalExam.time}` : 'غير محدد';
+                    finalExamCell.classList.add('final-exam');
+                    row.appendChild(finalExamCell);
+                    
+                    const actionsCell = document.createElement('td');
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'حذف';
+                    deleteBtn.classList.add('remove-session');
+                    deleteBtn.addEventListener('click', function() {
+                        if (confirm(`هل أنت متأكد من أنك تريد حذف مادة ${course.course}؟`)) {
+                            scheduleData.splice(index, 1);
+                            saveData();
+                            renderSchedule();
+                        }
+                    });
+                    actionsCell.appendChild(deleteBtn);
+                    row.appendChild(actionsCell);
+                    
+                    examsTable.appendChild(row);
+                });
+            }
+
+            // دالة التصدير إلى PDF
+            document.getElementById('exportPdf').addEventListener('click', function() {
+                const { jsPDF } = window.jspdf;
+                
+                // أخذ لقطة للجدول
+                html2canvas(document.querySelector('.container')).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const imgWidth = 210; // عرض A4 بالمليمتر
+                    const pageHeight = 297; // ارتفاع A4 بالمليمتر
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    // إضافة صفحات إضافية إذا كان المحتوى طويلاً
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    pdf.save('جدول_الجامعة_المنظم.pdf');
+                });
+            });
+
+            // التهيئة الأولية
+            renderSchedule();
+        });
+    </script>
+</body>
+</html>
